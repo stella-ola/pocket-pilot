@@ -1,0 +1,14 @@
+name: Tests
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run tricky scenarios (fails if the launch gate fails)
+        run: node tests/run-tests.mjs
+      - if: always()
+        run: cat data/test-results.md >> "$GITHUB_STEP_SUMMARY"

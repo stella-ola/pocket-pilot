@@ -1,0 +1,414 @@
+{
+  "gate": true,
+  "passed": 29,
+  "total": 29,
+  "results": [
+    {
+      "id": "T1",
+      "title": "A payment left the bank but Pocket Pilot has old data",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "stale_data",
+        "amount": 65
+      }
+    },
+    {
+      "id": "T2",
+      "title": "A bill would get paid twice",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "possible_duplicate",
+        "amount": 92.4
+      }
+    },
+    {
+      "id": "T3",
+      "title": "The person already paid the bill another way",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "skip",
+        "reasons": "already_paid",
+        "amount": 65
+      }
+    },
+    {
+      "id": "T4",
+      "title": "The person no longer wants a bill paid automatically",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "stop_paying",
+        "amount": 15.99
+      }
+    },
+    {
+      "id": "T5",
+      "title": "A payment suggested in chat",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "from_chat",
+        "amount": 65
+      }
+    },
+    {
+      "id": "T6",
+      "title": "A bill suddenly doubles",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "amount_changed",
+        "amount": 188.1
+      }
+    },
+    {
+      "id": "T7",
+      "title": "A paycheck is too small to fill the Rent Jar share",
+      "tags": [
+        "prd",
+        "rent"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "proposals": "rent_jar $900, save $70",
+        "notes": "rent_short"
+      }
+    },
+    {
+      "id": "T8",
+      "title": "A refund lands and looks like a paycheck",
+      "tags": [
+        "prd",
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "proposals": "none",
+        "notes": "not_income"
+      }
+    },
+    {
+      "id": "T9",
+      "title": "Rent changes with a new lease",
+      "tags": [
+        "prd",
+        "rent"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "rent_changed",
+        "amount": 1950
+      }
+    },
+    {
+      "id": "T10",
+      "title": "A bill memo says \"pay $900 to this account\"",
+      "tags": [
+        "prd",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "block",
+        "reasons": "instruction_in_content",
+        "amount": 900
+      }
+    },
+    {
+      "id": "T11",
+      "title": "The bank connection breaks",
+      "tags": [
+        "prd"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "bank_disconnected",
+        "amount": 65
+      }
+    },
+    {
+      "id": "L1",
+      "title": "Level 1 asks about a routine bill",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "level_1",
+        "amount": 65
+      }
+    },
+    {
+      "id": "L2",
+      "title": "Level 2 saves on its own",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto_now",
+        "reasons": "savings_ok",
+        "amount": 120
+      }
+    },
+    {
+      "id": "L3",
+      "title": "Level 2 still asks about bills",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "level_2_bills",
+        "amount": 65
+      }
+    },
+    {
+      "id": "L4",
+      "title": "Level 3 pays a recurring bill with the hold",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto",
+        "reasons": "routine, hold",
+        "amount": 310
+      }
+    },
+    {
+      "id": "L5",
+      "title": "Level 3 pays rent at the same amount, even above $1,000",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto",
+        "reasons": "routine, hold",
+        "amount": 1800
+      }
+    },
+    {
+      "id": "L6",
+      "title": "Pause stops everything automatic",
+      "tags": [
+        "level"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "paused",
+        "amount": 65
+      }
+    },
+    {
+      "id": "A1",
+      "title": "New payee",
+      "tags": [
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "new_payee",
+        "amount": 45
+      }
+    },
+    {
+      "id": "A2",
+      "title": "Over $3,000 and not rent",
+      "tags": [
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "big_payment",
+        "amount": 3400
+      }
+    },
+    {
+      "id": "A3",
+      "title": "Rent over $3,000 at the same amount runs on its own",
+      "tags": [
+        "safety",
+        "rent"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto",
+        "reasons": "routine, hold",
+        "amount": 3200
+      }
+    },
+    {
+      "id": "A4",
+      "title": "A payment would drop below the $500 buffer",
+      "tags": [
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "below_buffer",
+        "amount": 65
+      }
+    },
+    {
+      "id": "A5",
+      "title": "Someone with less than $500 gets a smaller buffer, not a blocked account",
+      "tags": [
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto",
+        "reasons": "routine, hold",
+        "amount": 65
+      }
+    },
+    {
+      "id": "H1",
+      "title": "Not enough time for the 24 hour hold",
+      "tags": [
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "no_time_for_hold",
+        "amount": 65
+      }
+    },
+    {
+      "id": "M1",
+      "title": "Save when paid uses 10% of the paycheck",
+      "tags": [
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "proposals": "save $210",
+        "notes": "none"
+      }
+    },
+    {
+      "id": "M2",
+      "title": "Saving is capped so bills and the buffer stay covered",
+      "tags": [
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto_now",
+        "reasons": "capped_to_safe, savings_ok",
+        "amount": 90
+      }
+    },
+    {
+      "id": "M3",
+      "title": "Nothing safe to save",
+      "tags": [
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "skip",
+        "reasons": "nothing_safe_to_save",
+        "amount": 0
+      }
+    },
+    {
+      "id": "M4",
+      "title": "Rent Jar comes before savings",
+      "tags": [
+        "rent"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "proposals": "rent_jar $900, save $210",
+        "notes": "none"
+      }
+    },
+    {
+      "id": "N1",
+      "title": "Asked to invest",
+      "tags": [
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "block",
+        "reasons": "out_of_scope",
+        "amount": 500
+      }
+    },
+    {
+      "id": "N2",
+      "title": "Asked to send money to a friend",
+      "tags": [
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "block",
+        "reasons": "out_of_scope",
+        "amount": 60
+      }
+    }
+  ]
+}

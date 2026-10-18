@@ -1,0 +1,6 @@
+{
+  "name": "pocket-pilot",
+  "type": "module",
+  "private": true,
+  "scripts": { "test": "node tests/run-tests.mjs" }
+}
