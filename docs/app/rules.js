@@ -100,12 +100,19 @@ export function decide(action, state, now, settings = {}) {
     }
   }
 
+  // 3b. Cancelling a service is never automatic: it can't always be undone
+  if (action.type === 'cancel_subscription') {
+    why('cancel_always_asks', `Cancelling ${action.payee} always needs your approval, because some services can't be restarted at the same price.`);
+    return result('ask', { amount: action.amount });
+  }
+
   // 4. Conditions that switch off everything automatic
   let mustAsk = false;
   if (state.paused) { why('paused', 'Automatic actions are paused.'); mustAsk = true; }
   if (state.connected === false) { why('bank_disconnected', 'Your bank connection is broken, so automatic actions are paused until it reconnects.'); mustAsk = true; }
   else if ((state.dataAgeHours ?? 0) > s.staleDataHours) { why('stale_data', `Your bank data is ${state.dataAgeHours} hours old. Pocket Pilot waits for fresh data before acting on its own.`); mustAsk = true; }
   if (action.origin === 'chat' && isPayment) { why('from_chat', 'Payments suggested in chat always need your approval.'); mustAsk = true; }
+  if (action.origin === 'insight' && isPayment) { why('from_insight', 'Payments suggested by an insight always need your approval.'); mustAsk = true; }
 
   // 5. Always ask, at every level (payments)
   if (isPayment) {

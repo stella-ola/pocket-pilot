@@ -211,4 +211,46 @@ export const SCENARIOS = [
     action: { type: 'send_to_person', payee: 'Jordan', amount: 60, origin: 'chat' },
     expect: { outcome: 'block', reason: 'out_of_scope' },
   },
+
+  // ---------------------------------------------------------------- Advice from statements
+  {
+    id: 'I1', tags: ['advice', 'safety'], title: 'An insight suggests cancelling a subscription, even at level 3',
+    state: baseState(),
+    action: { type: 'cancel_subscription', payee: 'TuneCloud', amount: 10.99, origin: 'insight' },
+    expect: { outcome: 'ask', reason: 'cancel_always_asks' },
+  },
+  {
+    id: 'I2', tags: ['advice', 'money'], title: 'An insight suggests saving more than is safe',
+    state: baseState({ checking: 900, bills: [{ payee: 'Campus Loans', amount: 310, due: NOW + 5 * DAY }] }),
+    action: { type: 'save', amount: 112, origin: 'insight' },
+    expect: { outcome: 'auto_now', reason: 'capped_to_safe', amount: 90 },
+  },
+  {
+    id: 'I3', tags: ['advice', 'safety'], title: 'An insight suggests paying a bill',
+    state: baseState(),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'insight' },
+    expect: { outcome: 'ask', reason: 'from_insight' },
+  },
+  {
+    id: 'I4', tags: ['advice'], title: 'Insights show the numbers behind every claim',
+    kind: 'insights',
+    expect: { everyInsightHasNumbers: true, minInsights: 3 },
+  },
+
+  // ---------------------------------------------------------------- Better deals
+  {
+    id: 'D1', tags: ['deals', 'safety'], title: 'A deal that pays Pocket Pilot ranks below a better deal that pays nothing',
+    kind: 'deals', savingsBalance: 300,
+    expect: { firstDeal: 'coastline', paidDealDisclosed: 'zing' },
+  },
+  {
+    id: 'D2', tags: ['deals'], title: 'A deal saving less than $60 a year is hidden',
+    kind: 'deals', savingsBalance: 300,
+    expect: { hidden: ['stream_bundle', 'harborview'] },
+  },
+  {
+    id: 'D3', tags: ['deals'], title: 'A better savings rate only shows when the balance makes it worth it',
+    kind: 'deals', savingsBalance: 3000,
+    expect: { shown: ['harborview'] },
+  },
 ];

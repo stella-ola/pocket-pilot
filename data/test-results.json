@@ -1,7 +1,7 @@
 {
   "gate": true,
-  "passed": 29,
-  "total": 29,
+  "passed": 36,
+  "total": 36,
   "results": [
     {
       "id": "T1",
@@ -408,6 +408,100 @@
         "outcome": "block",
         "reasons": "out_of_scope",
         "amount": 60
+      }
+    },
+    {
+      "id": "I1",
+      "title": "An insight suggests cancelling a subscription, even at level 3",
+      "tags": [
+        "advice",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "cancel_always_asks",
+        "amount": 10.99
+      }
+    },
+    {
+      "id": "I2",
+      "title": "An insight suggests saving more than is safe",
+      "tags": [
+        "advice",
+        "money"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto_now",
+        "reasons": "capped_to_safe, savings_ok",
+        "amount": 90
+      }
+    },
+    {
+      "id": "I3",
+      "title": "An insight suggests paying a bill",
+      "tags": [
+        "advice",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "from_insight",
+        "amount": 65
+      }
+    },
+    {
+      "id": "I4",
+      "title": "Insights show the numbers behind every claim",
+      "tags": [
+        "advice"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "insights": "Food delivery is up 38%; 3 subscriptions, $40.97 a month; $14 in ATM fees"
+      }
+    },
+    {
+      "id": "D1",
+      "title": "A deal that pays Pocket Pilot ranks below a better deal that pays nothing",
+      "tags": [
+        "deals",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "deals": "coastline $360/yr; zing $120/yr (fee disclosed)"
+      }
+    },
+    {
+      "id": "D2",
+      "title": "A deal saving less than $60 a year is hidden",
+      "tags": [
+        "deals"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "deals": "coastline $360/yr; zing $120/yr (fee disclosed)"
+      }
+    },
+    {
+      "id": "D3",
+      "title": "A better savings rate only shows when the balance makes it worth it",
+      "tags": [
+        "deals"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "deals": "coastline $360/yr; zing $120/yr (fee disclosed); harborview $105/yr (fee disclosed)"
       }
     }
   ]

@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pocket Pilot Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* Layout: the phone (what the person sees) beside the control room (what happens to them), tests underneath. */
+:root {
+  --ground: #EEF2EE; --surface: #FFFFFF; --sunk: #E3E9E4; --ink: #14231E; --muted: #5A6B64; --line: #CFD9D2;
+  --mint: #0E7A57; --mint-soft: #DDF1E7; --mint-ink: #FFFFFF;
+  --hold: #2F5E9E; --hold-soft: #E2EAF6;
+  --ask: #9A6300; --ask-soft: #FBEFD6;
+  --block: #B42F33; --block-soft: #FBE5E5;
+  --skip: #5A6B64; --skip-soft: #E8ECE9;
+  --phone: #0F1A16;
+  --display: 'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
+  --body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #101714; --surface: #18221E; --sunk: #202C27; --ink: #E5EEE9; --muted: #98AAA2; --line: #2D3A34;
+  --mint: #4FCB98; --mint-soft: #173328; --mint-ink: #0B1712;
+  --hold: #84AEEB; --hold-soft: #1B2A40; --ask: #E9B64E; --ask-soft: #352A12;
+  --block: #F08286; --block-soft: #3A1C1E; --skip: #98AAA2; --skip-soft: #232D29; --phone: #050907;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --ground: #101714; --surface: #18221E; --sunk: #202C27; --ink: #E5EEE9; --muted: #98AAA2; --line: #2D3A34;
+  --mint: #4FCB98; --mint-soft: #173328; --mint-ink: #0B1712;
+  --hold: #84AEEB; --hold-soft: #1B2A40; --ask: #E9B64E; --ask-soft: #352A12;
+  --block: #F08286; --block-soft: #3A1C1E; --skip: #98AAA2; --skip-soft: #232D29; --phone: #050907;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 400 15px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1160px; margin: 0 auto; padding-block: 28px 56px; display: grid; gap: 32px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+h2 { font-size: 22px; font-weight: 700; }
+h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-family: var(--body); }
+p { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
+header.top { display: grid; gap: 10px; }
+header.top p { color: var(--muted); max-width: 68ch; }
+.principle { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; }
+.principle b { font-family: var(--display); color: var(--mint); }
+
+.stage { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 32px; align-items: start; }
+
+/* Phone */
+.phone { background: var(--phone); border-radius: 40px; padding: 12px; box-shadow: 0 24px 60px -30px rgba(10, 30, 22, .45); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.screen { background: var(--ground); border-radius: 30px; height: min(780px, 82vh); overflow-y: auto; overscroll-behavior: contain; }
+.app-bar { display: flex; justify-content: space-between; align-items: center; padding: 18px 18px 8px; }
+.app-bar .brand { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+.app-bar .clock { font-size: 12px; color: var(--muted); text-align: right; }
+.app-body { display: grid; gap: 14px; padding: 6px 14px 22px; }
+.status-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--sunk); color: var(--muted); }
+.pill.warn { background: var(--ask-soft); color: var(--ask); }
+.pill.bad { background: var(--block-soft); color: var(--block); }
+.pill.good { background: var(--mint-soft); color: var(--mint); }
+
+.hero { background: var(--surface); border-radius: 20px; padding: 18px; display: grid; gap: 4px; }
+.hero .label { font-size: 13px; color: var(--muted); }
+.hero .big { font-family: var(--display); font-weight: 800; font-size: 44px; letter-spacing: -0.03em; line-height: 1.05; }
+.hero .sub { font-size: 13px; color: var(--muted); }
+
+.accounts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.acct { background: var(--surface); border-radius: 16px; padding: 12px 14px; display: grid; gap: 2px; }
+.acct span { font-size: 12px; color: var(--muted); }
+.acct b { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.acct.wide { grid-column: 1 / -1; }
+.jar-bar { height: 8px; border-radius: 4px; background: var(--sunk); overflow: hidden; margin-top: 6px; }
+.jar-bar i { display: block; height: 100%; background: var(--mint); border-radius: 4px; transition: width .4s ease; }
+
+.card { background: var(--surface); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.count { font-size: 12px; font-weight: 700; min-width: 22px; text-align: center; padding: 1px 7px; border-radius: 999px; background: var(--sunk); color: var(--muted); }
+.count.on { background: var(--ask); color: var(--surface); }
+.empty { font-size: 13px; color: var(--muted); }
+
+.item { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.item:first-of-type { border-top: 0; padding-top: 0; }
+.item-row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.item-title { font-weight: 600; font-size: 14px; }
+.item-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item-why { font-size: 13px; color: var(--muted); }
+.btns { display: flex; gap: 8px; }
+.btn { border: 0; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 700; }
+.btn.go { background: var(--mint); color: var(--mint-ink); }
+.btn.no { background: var(--sunk); color: var(--ink); }
+
+.log { display: grid; gap: 0; }
+.log details { border-top: 1px solid var(--line); padding: 9px 0; }
+.log details:first-child { border-top: 0; padding-top: 0; }
+.log summary { list-style: none; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; cursor: pointer; }
+.log summary::-webkit-details-marker { display: none; }
+.log .t { font-size: 13px; font-weight: 600; min-width: 0; }
+.log .when { font-size: 11px; color: var(--muted); display: block; font-weight: 400; }
+.log ul { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: grid; gap: 3px; }
+.why-link { font-size: 11px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.c-auto { background: var(--hold-soft); color: var(--hold); }
+.c-done { background: var(--mint-soft); color: var(--mint); }
+.c-ask { background: var(--ask-soft); color: var(--ask); }
+.c-block { background: var(--block-soft); color: var(--block); }
+.c-skip { background: var(--skip-soft); color: var(--skip); }
+.c-info { background: var(--sunk); color: var(--muted); }
+
+.insight { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.insight:first-of-type { border-top: 0; padding-top: 0; }
+.insight details summary { font-size: 12px; color: var(--muted); cursor: pointer; }
+.insight details ul { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+.btn.ghost { background: transparent; color: var(--muted); padding-inline: 6px; text-decoration: underline; text-underline-offset: 2px; }
+.save-tag { font-size: 12px; font-weight: 700; color: var(--mint); white-space: nowrap; }
+.fee-note { font-size: 12px; color: var(--ask); }
+.cats { display: grid; gap: 6px; }
+.cat { display: grid; grid-template-columns: 108px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
+.cat .bar { height: 8px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.cat .bar i { display: block; height: 100%; background: var(--hold); border-radius: 4px; }
+.habits { display: grid; gap: 6px; }
+.habit { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.habit i { width: 16px; height: 16px; border-radius: 50%; flex: none; display: grid; place-items: center; font-style: normal; font-size: 10px; font-weight: 800; }
+.habit.yes i { background: var(--mint); color: var(--mint-ink); }
+.habit.no i { background: var(--block-soft); color: var(--block); }
+
+/* Control room */
+.controls { display: grid; gap: 22px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; }
+.panel > p { color: var(--muted); font-size: 14px; }
+.levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.level { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; text-align: left; display: grid; gap: 2px; }
+.level b { font-size: 14px; }
+.level span { font-size: 12px; color: var(--muted); }
+.level[aria-pressed="true"] { border-color: var(--mint); background: var(--mint-soft); }
+.events { display: grid; gap: 16px; }
+.group { display: grid; gap: 8px; }
+.ev-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.ev { border: 1px solid var(--line); background: var(--ground); border-radius: 10px; padding: 9px 12px; text-align: left; display: grid; gap: 1px; }
+.ev:hover { border-color: var(--mint); }
+.ev b { font-size: 14px; font-weight: 600; }
+.ev span { font-size: 12px; color: var(--muted); }
+.ev[aria-pressed="true"] { border-color: var(--block); background: var(--block-soft); }
+.ev.time { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+.ev.time span { color: var(--ground); opacity: .75; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12px; color: var(--muted); align-items: center; }
+
+/* Tests */
+.tests { display: grid; gap: 14px; }
+.tests-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.gate { font-family: var(--display); font-weight: 800; font-size: 18px; padding: 6px 14px; border-radius: 10px; }
+.gate.pass { background: var(--mint-soft); color: var(--mint); }
+.gate.fail { background: var(--block-soft); color: var(--block); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); background: var(--sunk); }
+tr:last-child td { border-bottom: 0; }
+td.res { font-weight: 700; white-space: nowrap; }
+td.res.p { color: var(--mint); } td.res.f { color: var(--block); }
+footer { font-size: 13px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .phone { position: static; max-width: 400px; width: 100%; margin: 0 auto; }
+  .screen { height: 640px; }
+}
+@media (max-width: 520px) { .levels { grid-template-columns: 1fr; } .phone { border-radius: 28px; padding: 8px; } .screen { border-radius: 22px; } }
+@media (prefers-reduced-motion: reduce) { .jar-bar i { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Pocket Pilot</h1>
+    <p class="principle">The AI proposes, <b>the policy permits.</b></p>
+    <p>Make things happen to Maya, a fictional young professional. Pick how much freedom Pocket Pilot gets, then send paychecks, bills, and trouble her way, and watch what it does on its own, what it asks about, and what it refuses. Tap any activity to see why. Insights from her statement and better deals sit in the app too; their suggestions go through the same rules.</p>
+  </header>
+
+  <section class="stage">
+    <div class="phone" aria-label="Pocket Pilot app">
+      <div class="screen" id="screen">
+        <div class="app-bar">
+          <span class="brand">Pocket Pilot</span>
+          <span class="clock num" id="clock"></span>
+        </div>
+        <div class="app-body">
+          <div class="status-strip" id="status"></div>
+          <div class="hero">
+            <span class="label">Safe to spend today</span>
+            <span class="big num" id="safe"></span>
+            <span class="sub" id="safe-sub"></span>
+          </div>
+          <div class="accounts">
+            <div class="acct"><span>Checking</span><b class="num" id="checking"></b></div>
+            <div class="acct"><span>Pilot Savings</span><b class="num" id="savings"></b></div>
+            <div class="acct wide"><span id="rent-label"></span><b class="num" id="rentjar"></b><div class="jar-bar"><i id="rent-bar"></i></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Waiting for you</h3><span class="count" id="inbox-count">0</span></div>
+            <div id="inbox"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>On hold, sending soon</h3><span class="count" id="held-count">0</span></div>
+            <div id="held"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Where it went</h3><span class="pill num" id="spent"></span></div>
+            <div class="cats" id="cats"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>From your statement</h3><span class="count" id="ins-count">0</span></div>
+            <div id="insights"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Better deals</h3><span class="count" id="deal-count">0</span></div>
+            <div id="deals"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>This month</h3><span class="pill num" id="score"></span></div>
+            <div class="habits" id="habits"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Activity</h3></div>
+            <div class="log" id="log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel">
+        <h2>Comfort level</h2>
+        <p>Maya picks how much Pocket Pilot can do without asking. Some rules apply at every level.</p>
+        <div class="levels" id="levels"></div>
+      </div>
+      <div class="panel">
+        <h2>Make something happen</h2>
+        <div class="events" id="events"></div>
+        <div class="legend">
+          <span class="chip c-done">Done</span> moved between her own accounts
+          <span class="chip c-auto">On hold</span> sends after 24 hours
+          <span class="chip c-ask">Asking</span> waits for her
+          <span class="chip c-skip">Skipped</span>
+          <span class="chip c-block">Blocked</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tests" aria-labelledby="tests-title">
+    <div class="tests-head">
+      <div>
+        <h2 id="tests-title">Tricky scenarios</h2>
+        <p style="color:var(--muted)">The same rules the simulator uses, run against every scenario from the PRD. Nothing ships unless all pass.</p>
+      </div>
+      <span class="gate" id="gate"></span>
+    </div>
+    <div class="scroll"><table><thead><tr><th>ID</th><th>Scenario</th><th>Expected</th><th>What Pocket Pilot did</th><th>Result</th></tr></thead><tbody id="tests"></tbody></table></div>
+  </section>
+
+  <footer>Fictional product. Every person, payee, and deal shown here is invented; any resemblance to a real business is a coincidence. Synthetic data only. Not affiliated with any company.</footer>
+</div>
+
+<script type="module">
+import { decide, onDeposit, safeToSave, effectiveBuffer, healthScore, LEVELS, DEFAULTS } from './app/rules.js';
+import { SCENARIOS, NOW } from './app/scenarios.js';
+import { analyzeStatement, findDeals, SAMPLE_STATEMENT, DEAL_CATALOG, byCategory } from './app/insights.js';
+
+const DAY = 864e5, H = 36e5;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const usd = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const when = (t) => new Date(t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' });
+const RENT = 1800;
+let uid = 0;
+
+function fresh() {
+  return {
+    clock: NOW, checking: 4200, savings: 300, rentJar: 0, level: 1,
+    paused: false, connected: true, dataAgeHours: 1, paychecksBeforeDue: 2,
+    payees: {
+      'Harbor Apartments': { trusted: true, lastAmount: RENT },
+      'Bright Mobile': { trusted: true, lastAmount: 65 },
+      'City Power': { trusted: true, lastAmount: 92.4 },
+      'StreamBox': { trusted: true, lastAmount: 15.99 },
+      'Campus Loans': { trusted: true, lastAmount: 310 },
+    },
+    history: [], bills: [], inbox: [], held: [], log: [],
+    saved: false, late: 0, belowBuffer: false, dismissed: [], cancelled: [],
+  };
+}
+let S = fresh();
+
+function ruleState(action) {
+  const rent = action?.isRent;
+  return {
+    checking: S.checking + (rent ? S.rentJar : 0),
+    jars: { rentJar: S.rentJar }, connected: S.connected, dataAgeHours: S.dataAgeHours, paused: S.paused,
+    payees: S.payees, history: S.history, bills: S.bills.filter((b) => b.status === 'open'),
+    rent: { amount: RENT, paychecksBeforeDue: S.paychecksBeforeDue },
+  };
+}
+
+function log(title, amount, kind, reasons = []) { S.log.unshift({ id: ++uid, at: S.clock, title, amount, kind, reasons }); }
+
+const KIND = { auto_now: ['Done', 'c-done'], auto: ['On hold', 'c-auto'], ask: ['Asking', 'c-ask'], skip: ['Skipped', 'c-skip'], block: ['Blocked', 'c-block'], sent: ['Sent', 'c-done'], info: ['Note', 'c-info'], late: ['Late', 'c-block'], cancelled: ['Cancelled', 'c-skip'] };
+
+function label(a) {
+  if (a.type === 'save') return 'Save to Pilot Savings';
+  if (a.type === 'rent_jar') return 'Set aside for rent';
+  if (a.type === 'invest') return 'Invest money';
+  if (a.type === 'cancel_subscription') return `Cancel ${a.payee}`;
+  if (a.type === 'send_to_person') return `Send money to ${a.payee}`;
+  return `Pay ${a.payee}`;
+}
+
+function propose(action) {
+  const d = decide({ ...action }, ruleState(action), S.clock, { comfortLevel: S.level });
+  const a = { ...action, amount: d.amount ?? action.amount };
+  const title = label(a);
+  if (d.outcome === 'auto_now') { execute(a); log(title, a.amount, 'auto_now', d.reasons); }
+  else if (d.outcome === 'auto') { S.held.push({ id: ++uid, action: a, sendAt: d.sendAt, reasons: d.reasons }); log(title, a.amount, 'auto', d.reasons); }
+  else if (d.outcome === 'ask') { S.inbox.push({ id: ++uid, action: a, reasons: d.reasons }); log(title, a.amount, 'ask', d.reasons); }
+  else {
+    if (d.reasons.some((r) => r.code === 'already_paid')) closeBill(a, 'paid');
+    log(title, a.amount, d.outcome, d.reasons);
+  }
+}
+
+function closeBill(a, status) { const b = S.bills.find((x) => x.id === a.billId); if (b) b.status = status; }
+
+function execute(a) {
+  if (a.type === 'save') { S.checking -= a.amount; S.savings += a.amount; if (a.amount > 0) S.saved = true; }
+  else if (a.type === 'rent_jar') { S.checking -= a.amount; S.rentJar += a.amount; }
+  else if (a.type === 'cancel_subscription') { S.cancelled.push(a.payee); }
+  else if (a.type === 'pay_bill') {
+    let rest = a.amount;
+    if (a.isRent) { const fromJar = Math.min(S.rentJar, rest); S.rentJar -= fromJar; rest -= fromJar; S.paychecksBeforeDue = 2; }
+    S.checking -= rest;
+    S.history.push({ payee: a.payee, amount: a.amount, at: S.clock, via: 'pocket_pilot' });
+    S.payees[a.payee] = { ...(S.payees[a.payee] || {}), trusted: true, lastAmount: a.amount, stopPaying: S.payees[a.payee]?.stopPaying };
+    closeBill(a, 'paid');
+  }
+  S.checking = Math.round(S.checking * 100) / 100;
+  if (S.checking < effectiveBuffer({}, DEFAULTS)) S.belowBuffer = true;
+}
+
+function deposit(amount, kind, title) {
+  S.checking += amount;
+  log(title, amount, 'info', [{ text: kind === 'paycheck' ? 'Paydays vary, so saving starts when money arrives, not on a set date.' : 'Money arrived.' }]);
+  const r = onDeposit({ amount, kind }, ruleState(), S.clock, {});
+  r.notes.forEach((n) => log(n.code === 'not_income' ? 'Not treated as a paycheck' : 'Rent Jar warning', null, 'info', [{ text: n.text }]));
+  r.proposals.forEach((p) => propose(p));
+  if (kind === 'paycheck') S.paychecksBeforeDue = Math.max(1, S.paychecksBeforeDue - 1);
+}
+
+function bill(payee, amount, dueInHours, extra = {}) {
+  const b = { id: ++uid, payee, amount, due: S.clock + dueInHours * H, status: 'open', isRent: !!extra.isRent };
+  S.bills.push(b);
+  propose({ type: 'pay_bill', payee, amount, due: b.due, origin: extra.origin || 'pilot', isRent: b.isRent, billId: b.id });
+}
+
+function approve(id) {
+  const i = S.inbox.findIndex((x) => x.id === id); if (i < 0) return;
+  const { action } = S.inbox.splice(i, 1)[0];
+  execute(action);
+  log(`${label(action)} (you approved)`, action.amount, 'sent', [{ text: 'You approved it, so it sent right away.' }]);
+  render();
+}
+function decline(id) {
+  const i = S.inbox.findIndex((x) => x.id === id); if (i < 0) return;
+  const { action } = S.inbox.splice(i, 1)[0];
+  closeBill(action, 'declined');
+  log(`${label(action)} (you declined)`, action.amount, 'cancelled', [{ text: 'You declined, so nothing moved. If it was a bill, it is yours to handle.' }]);
+  render();
+}
+function cancelHeld(id) {
+  const i = S.held.findIndex((x) => x.id === id); if (i < 0) return;
+  const { action } = S.held.splice(i, 1)[0];
+  closeBill(action, 'declined');
+  log(`${label(action)} (you cancelled)`, action.amount, 'cancelled', [{ text: 'Cancelled during the 24 hour hold. No money moved.' }]);
+  render();
+}
+
+function skip24() {
+  S.clock += 24 * H;
+  S.held.filter((h) => h.sendAt <= S.clock).forEach((h) => { execute(h.action); log(label(h.action), h.action.amount, 'sent', [{ text: 'The 24 hour hold ended with no cancel, so it sent.' }]); });
+  S.held = S.held.filter((h) => h.sendAt > S.clock);
+  S.bills.filter((b) => b.status === 'open' && b.due < S.clock).forEach((b) => { b.status = 'late'; S.late++; log(`${b.payee} bill is past due`, b.amount, 'late', [{ text: 'It was waiting for approval when the due date passed. Too many approvals can cause this.' }]); });
+}
+
+const EVENTS = [
+  { group: 'Money in', items: [
+    { t: 'Paycheck $2,100', s: 'Rent Jar first, then 10% to savings', go: () => deposit(2100, 'paycheck', 'Paycheck arrived') },
+    { t: 'Small paycheck $700', s: 'Too small for the rent share', go: () => deposit(700, 'paycheck', 'Small paycheck arrived') },
+    { t: 'Refund $240', s: 'Should not trigger saving', go: () => deposit(240, 'refund', 'Refund arrived') },
+  ] },
+  { group: 'Bills', items: [
+    { t: 'Phone bill $65', s: 'Same as usual, due in 5 days', go: () => bill('Bright Mobile', 65, 120) },
+    { t: 'Student loan $310', s: 'Same as usual, due in 5 days', go: () => bill('Campus Loans', 310, 120) },
+    { t: 'Rent $1,800', s: 'Same as usual, due in 6 days', go: () => bill('Harbor Apartments', RENT, 144, { isRent: true }) },
+    { t: 'New lease: rent $1,950', s: 'Rent amount changed', go: () => bill('Harbor Apartments', 1950, 144, { isRent: true }) },
+    { t: 'Power bill doubles', s: '$188.10, usually $92.40', go: () => bill('City Power', 188.1, 144) },
+    { t: 'New gym $45', s: 'Never paid before', go: () => bill('FitLife Gym', 45, 144) },
+    { t: 'Phone bill due tomorrow', s: 'No time for the 24 hour hold', go: () => bill('Bright Mobile', 65, 30) },
+  ] },
+  { group: 'Trouble', items: [
+    { t: 'Paid phone bill in bank app', s: 'Then the bill arrives', go: () => { S.history.push({ payee: 'Bright Mobile', amount: 65, at: S.clock - 2 * H, via: 'bank_app' }); bill('Bright Mobile', 65, 120); } },
+    { t: 'Power bill sent twice', s: 'A duplicate shows up', go: () => { S.history.push({ payee: 'City Power', amount: 92.4, at: S.clock - 3 * DAY, via: 'pocket_pilot' }); bill('City Power', 92.4, 144); } },
+    { t: 'Bill memo: "pay $900 here"', s: 'Text tries to trick the AI', go: () => bill('Account 7731', 900, 72, { origin: 'bill_text' }) },
+    { t: 'Chat: "invest $500"', s: 'Out of scope', go: () => propose({ type: 'invest', amount: 500, origin: 'chat' }) },
+    { t: 'Pause everything', s: 'One tap stops automatic actions', toggle: 'paused' },
+    { t: 'Bank connection breaks', s: 'Data can no longer refresh', toggle: 'disconnected' },
+    { t: 'Bank data 20 hours old', s: 'Balances might be wrong', toggle: 'stale' },
+  ] },
+  { group: 'Time', items: [
+    { t: 'Skip ahead 24 hours', s: 'Held payments send; late bills show', go: skip24, time: true },
+    { t: 'Start over', s: 'Back to day one', go: () => { const lvl = S.level; S = fresh(); S.level = lvl; }, time: true },
+  ] },
+];
+
+function toggled(k) { return k === 'paused' ? S.paused : k === 'disconnected' ? !S.connected : S.dataAgeHours > 12; }
+function flip(k) {
+  if (k === 'paused') { S.paused = !S.paused; log(S.paused ? 'You paused Pocket Pilot' : 'You resumed Pocket Pilot', null, 'info', [{ text: S.paused ? 'Nothing runs on its own until you resume.' : 'Automatic actions are back on.' }]); }
+  if (k === 'disconnected') { S.connected = !S.connected; log(S.connected ? 'Bank reconnected' : 'Bank connection broke', null, 'info', [{ text: S.connected ? 'Fresh data again.' : 'Automatic actions wait until it reconnects.' }]); }
+  if (k === 'stale') { S.dataAgeHours = S.dataAgeHours > 12 ? 1 : 20; log(S.dataAgeHours > 12 ? 'Bank data is 20 hours old' : 'Bank data refreshed', null, 'info', [{ text: S.dataAgeHours > 12 ? 'Pocket Pilot will not act on its own with old data.' : 'Data is current.' }]); }
+}
+
+$('events').innerHTML = EVENTS.map((g, gi) => `<div class="group"><h3>${g.group}</h3><div class="ev-list">${g.items.map((e, ii) => `<button class="ev${e.time ? ' time' : ''}" data-g="${gi}" data-i="${ii}"${e.toggle ? ' aria-pressed="false"' : ''}><b>${esc(e.t)}</b><span>${esc(e.s)}</span></button>`).join('')}</div></div>`).join('');
+$('events').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.ev'); if (!b) return;
+  const e = EVENTS[b.dataset.g].items[b.dataset.i];
+  if (e.toggle) flip(e.toggle); else e.go();
+  render();
+  $('screen').scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+});
+
+const LEVEL_NOTE = { 1: 'Asks before every move', 2: 'Saves on its own, asks about bills', 3: 'Routine bills and saving on its own' };
+$('levels').innerHTML = [1, 2, 3].map((l) => `<button class="level" data-l="${l}" aria-pressed="false"><b>${l}. ${LEVELS[l]}</b><span>${LEVEL_NOTE[l]}</span></button>`).join('');
+$('levels').addEventListener('click', (ev) => { const b = ev.target.closest('.level'); if (!b) return; S.level = +b.dataset.l; log(`Comfort level set to ${LEVELS[S.level]}`, null, 'info', [{ text: LEVEL_NOTE[S.level] + '.' }]); render(); });
+
+document.addEventListener('click', (ev) => {
+  const t = ev.target.closest('[data-act]'); if (!t) return;
+  const id = +t.dataset.id;
+  if (t.dataset.act === 'insight') { const i = INSIGHTS.find((x) => x.id === t.dataset.key); S.dismissed.push(i.id); propose({ ...i.suggest.action }); render(); return; }
+  if (t.dataset.act === 'wrong') { S.dismissed.push(t.dataset.key); log('You flagged an insight as wrong', null, 'info', [{ text: 'Pocket Pilot hides it and stops suggesting it. In a real product this feedback improves future insights.' }]); render(); return; }
+  if (t.dataset.act === 'dismiss-deal') { S.dismissed.push('deal:' + t.dataset.key); log('Deal dismissed', null, 'info', [{ text: 'Pocket Pilot will not show this deal again.' }]); render(); return; }
+  if (t.dataset.act === 'deal') { const d = DEALS_NOW().find((x) => x.id === t.dataset.key); log(`Looked at ${d.name}`, null, 'info', [{ text: 'Pocket Pilot never switches plans or opens accounts for you. You would sign up with them directly, and you can compare first.' }]); render(); return; }
+  if (t.dataset.act === 'approve') approve(id); else if (t.dataset.act === 'decline') decline(id); else if (t.dataset.act === 'cancel') cancelHeld(id);
+});
+
+const INSIGHTS = analyzeStatement(SAMPLE_STATEMENT);
+const DEALS_NOW = () => findDeals(SAMPLE_STATEMENT, DEAL_CATALOG, S.savings).filter((d) => !S.dismissed.includes('deal:' + d.id));
+
+function renderAdvice() {
+  const cats = Object.entries(byCategory(SAMPLE_STATEMENT.thisMonth)).sort((a, b) => b[1] - a[1]);
+  const max = cats[0][1], total = cats.reduce((t, c) => t + c[1], 0);
+  $('spent').textContent = usd(Math.round(total * 100) / 100);
+  $('cats').innerHTML = cats.map(([c, v]) => `<div class="cat"><span>${esc(c)}</span><span class="bar"><i style="width:${(v / max) * 100}%"></i></span><span class="num">${usd(v)}</span></div>`).join('');
+
+  const ins = INSIGHTS.filter((i) => !S.dismissed.includes(i.id));
+  $('ins-count').textContent = ins.length;
+  $('insights').innerHTML = ins.length ? ins.map((i) => `<div class="insight"><span class="item-title">${esc(i.title)}</span><p class="item-why">${esc(i.detail)}</p><details><summary>Show the numbers</summary><ul>${i.numbers.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></details><div class="btns">${i.suggest ? `<button class="btn go" data-act="insight" data-key="${i.id}">${esc(i.suggest.label)}</button>` : ''}<button class="btn ghost" data-act="wrong" data-key="${i.id}">This is wrong</button></div></div>`).join('') : '<p class="empty">No new insights.</p>';
+
+  const deals = DEALS_NOW();
+  $('deal-count').textContent = deals.length;
+  $('deals').innerHTML = deals.length ? deals.map((d) => `<div class="insight"><div class="item-row"><span class="item-title">${esc(d.name)}</span><span class="save-tag">Save ${usd(d.yearlySavings)}/yr</span></div><p class="item-why">${esc(d.compare)}. ${esc(d.note)}.</p>${d.disclosure ? `<p class="fee-note">${esc(d.disclosure)}</p>` : ''}<div class="btns"><button class="btn no" data-act="deal" data-key="${d.id}">Compare</button><button class="btn ghost" data-act="dismiss-deal" data-key="${d.id}">Not for me</button></div></div>`).join('') : '<p class="empty">No deals worth switching for right now.</p>';
+}
+
+function render() {
+  renderAdvice();
+  $('clock').innerHTML = esc(when(S.clock));
+  const st = [];
+  st.push(`<span class="pill good">Level ${S.level}: ${esc(LEVELS[S.level])}</span>`);
+  if (S.paused) st.push('<span class="pill warn">Paused</span>');
+  if (!S.connected) st.push('<span class="pill bad">Bank disconnected</span>');
+  else if (S.dataAgeHours > 12) st.push('<span class="pill warn">Data 20h old</span>');
+  $('status').innerHTML = st.join('');
+
+  const rs = ruleState();
+  const safe = safeToSave(rs, S.clock);
+  const due = S.bills.filter((b) => b.status === 'open' && b.due <= S.clock + 14 * DAY).reduce((t, b) => t + b.amount, 0);
+  $('safe').textContent = usd(safe);
+  $('safe-sub').textContent = `After ${usd(due)} in bills due in 2 weeks and your ${usd(effectiveBuffer(rs))} safety buffer`;
+  $('checking').textContent = usd(S.checking);
+  $('savings').textContent = usd(S.savings);
+  $('rent-label').textContent = `Rent Jar, ${usd(RENT)} rent`;
+  $('rentjar').textContent = `${usd(S.rentJar)} of ${usd(RENT)}`;
+  $('rent-bar').style.width = Math.min(100, (S.rentJar / RENT) * 100) + '%';
+
+  const why = (rs) => rs.map((r) => esc(r.text)).join(' ');
+  $('inbox-count').textContent = S.inbox.length; $('inbox-count').className = 'count' + (S.inbox.length ? ' on' : '');
+  $('inbox').innerHTML = S.inbox.length ? S.inbox.map((x) => `<div class="item"><div class="item-row"><span class="item-title">${esc(label(x.action))}</span><span class="item-amt">${usd(x.action.amount)}</span></div><p class="item-why">${why(x.reasons)}</p><div class="btns"><button class="btn go" data-act="approve" data-id="${x.id}">Approve</button><button class="btn no" data-act="decline" data-id="${x.id}">Decline</button></div></div>`).join('') : '<p class="empty">Nothing needs you right now.</p>';
+  $('held-count').textContent = S.held.length;
+  $('held').innerHTML = S.held.length ? S.held.map((x) => `<div class="item"><div class="item-row"><span class="item-title">${esc(label(x.action))}</span><span class="item-amt">${usd(x.action.amount)}</span></div><p class="item-why">Sends ${esc(when(x.sendAt))}. Lands before it is due.</p><div class="btns"><button class="btn no" data-act="cancel" data-id="${x.id}">Cancel payment</button></div></div>`).join('') : '<p class="empty">No payments on hold.</p>';
+
+  const habits = [
+    ['Knew where it went', true], ['Paid every bill on time', S.late === 0], ['Kept the safety buffer', !S.belowBuffer], ['Saved something', S.saved],
+  ];
+  const hs = healthScore({ billsOnTimePct: S.late ? 0.5 : 1, savedThisMonth: S.saved, bufferKept: !S.belowBuffer, cardsPaidInFull: null, checkedSpendingWeeks: 4 });
+  $('score').textContent = `Money health ${hs.score}`;
+  $('habits').innerHTML = habits.map(([t, ok]) => `<div class="habit ${ok ? 'yes' : 'no'}"><i>${ok ? '✓' : '!'}</i>${t}</div>`).join('');
+
+  $('log').innerHTML = S.log.length ? S.log.slice(0, 30).map((e) => {
+    const [txt, cls] = KIND[e.kind];
+    return `<details><summary><span class="chip ${cls}">${txt}</span><span class="t">${esc(e.title)}<span class="when">${esc(when(e.at))} · <span class="why-link">Why?</span></span></span><span class="item-amt">${e.amount != null ? usd(e.amount) : ''}</span></summary><ul>${e.reasons.map((r) => `<li>${esc(r.text)}</li>`).join('')}</ul></details>`;
+  }).join('') : '<p class="empty">Nothing yet. Send Maya a paycheck to start.</p>';
+
+  document.querySelectorAll('.level').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.l === S.level)));
+  document.querySelectorAll('.ev[aria-pressed]').forEach((b) => { const e = EVENTS[b.dataset.g].items[b.dataset.i]; b.setAttribute('aria-pressed', String(toggled(e.toggle))); });
+}
+
+// Tricky scenarios, run live against the same rules
+const rows = SCENARIOS.map((sc) => {
+  let ok = true, did, exp;
+  if (sc.kind === 'insights') {
+    const ins = analyzeStatement(SAMPLE_STATEMENT);
+    did = ins.map((i) => i.title).join('; ');
+    ok = ins.length >= sc.expect.minInsights && ins.every((i) => i.numbers?.length);
+    exp = 'Numbers behind every insight';
+  } else if (sc.kind === 'deals') {
+    const ds = findDeals(SAMPLE_STATEMENT, DEAL_CATALOG, sc.savingsBalance);
+    did = ds.map((d) => `${d.name} saves ${usd(d.yearlySavings)}/yr${d.paysPocketPilot ? ' (referral fee disclosed)' : ''}`).join('; ');
+    if (sc.expect.firstDeal && ds[0]?.id !== sc.expect.firstDeal) ok = false;
+    if (sc.expect.paidDealDisclosed && !ds.find((d) => d.id === sc.expect.paidDealDisclosed)?.disclosure) ok = false;
+    for (const id of sc.expect.hidden || []) if (ds.some((d) => d.id === id)) ok = false;
+    for (const id of sc.expect.shown || []) if (!ds.some((d) => d.id === id)) ok = false;
+    exp = sc.expect.firstDeal ? 'Ranked by your savings' : sc.expect.hidden ? 'Small deals hidden' : 'Shown when worth it';
+  } else if (sc.kind === 'deposit') {
+    const r = onDeposit(sc.deposit, sc.state, NOW);
+    did = (r.proposals.map((p) => `${label(p)} ${usd(p.amount)}`).join(', ') || 'No savings move') + (r.notes.length ? '. ' + r.notes.map((n) => n.text).join(' ') : '');
+    const save = r.proposals.find((p) => p.type === 'save'), rent = r.proposals.find((p) => p.type === 'rent_jar');
+    if (sc.expect.note && !r.notes.some((n) => n.code === sc.expect.note)) ok = false;
+    if (sc.expect.proposals !== undefined && r.proposals.length !== sc.expect.proposals) ok = false;
+    if (sc.expect.firstProposal && r.proposals[0]?.type !== sc.expect.firstProposal) ok = false;
+    if (sc.expect.saveAmount !== undefined && save?.amount !== sc.expect.saveAmount) ok = false;
+    if (sc.expect.rentShare !== undefined && rent?.amount !== sc.expect.rentShare) ok = false;
+    exp = sc.expect.firstProposal === 'rent_jar' ? 'Rent Jar first' : sc.expect.proposals === 0 ? 'No saving' : `Save ${usd(sc.expect.saveAmount ?? 0)}`;
+  } else {
+    const d = decide({ ...sc.action }, sc.state, NOW);
+    did = `${KIND[d.outcome][0]}. ${d.reasons.map((r) => r.text).join(' ')}`;
+    ok = d.outcome === sc.expect.outcome && (!sc.expect.reason || d.reasons.some((r) => r.code === sc.expect.reason)) && (sc.expect.amount === undefined || d.amount === sc.expect.amount);
+    exp = KIND[sc.expect.outcome][0];
+  }
+  return { sc, ok, did, exp };
+});
+const passed = rows.filter((r) => r.ok).length;
+$('gate').textContent = `${passed} of ${rows.length} pass`;
+$('gate').className = 'gate ' + (passed === rows.length ? 'pass' : 'fail');
+$('tests').innerHTML = rows.map((r) => `<tr><td>${r.sc.id}</td><td>${esc(r.sc.title)}</td><td>${esc(r.exp)}</td><td>${esc(r.did)}</td><td class="res ${r.ok ? 'p' : 'f'}">${r.ok ? 'Pass' : 'Fail'}</td></tr>`).join('');
+
+// Open in a realistic state: a paycheck has landed and a couple of bills are in.
+deposit(2100, 'paycheck', 'Paycheck arrived');
+bill('Bright Mobile', 65, 120);
+render();
+</script>
+
+</body>
+</html>
