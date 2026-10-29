@@ -149,6 +149,21 @@ header.top p { color: var(--muted); max-width: 68ch; }
 .ev[aria-pressed="true"] { border-color: var(--block); background: var(--block-soft); }
 .ev.time { background: var(--ink); color: var(--ground); border-color: var(--ink); }
 .ev.time span { color: var(--ground); opacity: .75; }
+.trust { background: var(--mint-soft); border-radius: 18px; padding: 14px; display: grid; gap: 8px; }
+.trust .item-title { color: var(--mint); }
+.badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: var(--ask-soft); color: var(--ask); }
+.checkin { font-size: 13px; color: var(--muted); }
+.batch { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--sunk); border-radius: 12px; padding: 10px 12px; }
+.batch span { font-size: 13px; }
+.v2tag { font-size: 11px; font-weight: 800; letter-spacing: .04em; padding: 2px 8px; border-radius: 6px; background: var(--mint); color: var(--mint-ink); vertical-align: middle; font-family: var(--body); }
+.load { display: grid; gap: 10px; }
+.load-row { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr) 34px; gap: 10px; align-items: center; font-size: 13px; }
+.load-row .bar { height: 14px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.load-row .bar i { display: block; height: 100%; border-radius: 4px; background: var(--ask); }
+.load-row.best .bar i { background: var(--mint); }
+.load-row b { font-variant-numeric: tabular-nums; text-align: right; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .load-row { grid-template-columns: minmax(0, 1fr) 34px; } .load-row .bar { grid-column: 1 / -1; grid-row: 2; } }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12px; color: var(--muted); align-items: center; }
 
 /* Tests */
@@ -182,6 +197,7 @@ footer { font-size: 13px; color: var(--muted); }
     <h1>Pocket Pilot</h1>
     <p class="principle">The AI proposes, <b>the policy permits.</b></p>
     <p>Make things happen to Maya, a fictional young professional. Pick how much freedom Pocket Pilot gets, then send paychecks, bills, and trouble her way, and watch what it does on its own, what it asks about, and what it refuses. Tap any activity to see why. Insights from her statement and better deals sit in the app too; their suggestions go through the same rules.</p>
+    <p><span class="v2tag">V2</span> Asking about every bill defeats the point. Now Maya approves a rule once per payee, Pocket Pilot only interrupts her for something unusual, and routine asks wait in one weekly check in.</p>
   </header>
 
   <section class="stage">
@@ -203,9 +219,15 @@ footer { font-size: 13px; color: var(--muted); }
             <div class="acct"><span>Pilot Savings</span><b class="num" id="savings"></b></div>
             <div class="acct wide"><span id="rent-label"></span><b class="num" id="rentjar"></b><div class="jar-bar"><i id="rent-bar"></i></div></div>
           </div>
+          <div id="trust"></div>
           <div class="card">
             <div class="card-head"><h3>Waiting for you</h3><span class="count" id="inbox-count">0</span></div>
+            <p class="checkin" id="checkin"></p>
             <div id="inbox"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Paying automatically</h3><span class="count" id="standing-count">0</span></div>
+            <div id="standing"></div>
           </div>
           <div class="card">
             <div class="card-head"><h3>On hold, sending soon</h3><span class="count" id="held-count">0</span></div>
@@ -242,6 +264,16 @@ footer { font-size: 13px; color: var(--muted); }
         <div class="levels" id="levels"></div>
       </div>
       <div class="panel">
+        <h2>Approve a rule once <span class="v2tag">V2</span></h2>
+        <p>Same month of bills, three ways. A standing permission covers one payee up to a limit; every safety rule still runs first.</p>
+        <div class="load" id="load"></div>
+        <p class="checkin" id="asked"></p>
+        <div class="btn-row">
+          <button class="btn go" id="send-month">Send a month of bills</button>
+          <button class="btn no" id="grant-all">Allow the 7 routine bills</button>
+        </div>
+      </div>
+      <div class="panel">
         <h2>Make something happen</h2>
         <div class="events" id="events"></div>
         <div class="legend">
@@ -259,7 +291,7 @@ footer { font-size: 13px; color: var(--muted); }
     <div class="tests-head">
       <div>
         <h2 id="tests-title">Tricky scenarios</h2>
-        <p style="color:var(--muted)">The same rules the simulator uses, run against every scenario from the PRD. Nothing ships unless all pass.</p>
+        <p style="color:var(--muted)">The same rules the simulator uses, run against every scenario from the PRD and the v2 changes. Nothing ships unless all pass.</p>
       </div>
       <span class="gate" id="gate"></span>
     </div>
@@ -270,8 +302,8 @@ footer { font-size: 13px; color: var(--muted); }
 </div>
 
 <script type="module">
-import { decide, onDeposit, safeToSave, effectiveBuffer, healthScore, LEVELS, DEFAULTS } from './app/rules.js';
-import { SCENARIOS, NOW } from './app/scenarios.js';
+import { decide, onDeposit, safeToSave, effectiveBuffer, healthScore, LEVELS, DEFAULTS, suggestStanding, splitAsks, weeklyCheckIn, countPrompts, ROUTINE_ASKS, TRUST } from './app/rules.js';
+import { SCENARIOS, NOW, SAMPLE_MONTH, MAYA_STANDING, baseState, withStanding } from './app/scenarios.js';
 import { analyzeStatement, findDeals, SAMPLE_STATEMENT, DEAL_CATALOG, byCategory } from './app/insights.js';
 
 const DAY = 864e5, H = 36e5;
@@ -292,8 +324,14 @@ function fresh() {
       'City Power': { trusted: true, lastAmount: 92.4 },
       'StreamBox': { trusted: true, lastAmount: 15.99 },
       'Campus Loans': { trusted: true, lastAmount: 310 },
+      'Clear Water': { trusted: true, lastAmount: 38 },
+      'Shield Auto': { trusted: true, lastAmount: 128 },
+      'NetSpeed Internet': { trusted: true, lastAmount: 70 },
     },
-    history: [], bills: [], inbox: [], held: [], log: [],
+    // Maya approved her phone bill by hand the last three months, so the trust ladder has something to offer.
+    history: [31, 61, 91].map((d) => ({ payee: 'Bright Mobile', amount: 65, at: NOW - d * DAY, via: 'pocket_pilot', approved: true })),
+    standing: {}, asked: 0,
+    bills: [], inbox: [], held: [], log: [],
     saved: false, late: 0, belowBuffer: false, dismissed: [], cancelled: [],
   };
 }
@@ -304,7 +342,8 @@ function ruleState(action) {
   return {
     checking: S.checking + (rent ? S.rentJar : 0),
     jars: { rentJar: S.rentJar }, connected: S.connected, dataAgeHours: S.dataAgeHours, paused: S.paused,
-    payees: S.payees, history: S.history, bills: S.bills.filter((b) => b.status === 'open'),
+    payees: S.payees, history: S.history, standing: S.standing,
+    pending: [...S.held, ...S.inbox].map((x) => x.action), bills: S.bills.filter((b) => b.status === 'open'),
     rent: { amount: RENT, paychecksBeforeDue: S.paychecksBeforeDue },
   };
 }
@@ -328,7 +367,7 @@ function propose(action) {
   const title = label(a);
   if (d.outcome === 'auto_now') { execute(a); log(title, a.amount, 'auto_now', d.reasons); }
   else if (d.outcome === 'auto') { S.held.push({ id: ++uid, action: a, sendAt: d.sendAt, reasons: d.reasons }); log(title, a.amount, 'auto', d.reasons); }
-  else if (d.outcome === 'ask') { S.inbox.push({ id: ++uid, action: a, reasons: d.reasons }); log(title, a.amount, 'ask', d.reasons); }
+  else if (d.outcome === 'ask') { S.asked++; S.inbox.push({ id: ++uid, action: a, reasons: d.reasons }); log(title, a.amount, 'ask', d.reasons); }
   else {
     if (d.reasons.some((r) => r.code === 'already_paid')) closeBill(a, 'paid');
     log(title, a.amount, d.outcome, d.reasons);
@@ -337,7 +376,7 @@ function propose(action) {
 
 function closeBill(a, status) { const b = S.bills.find((x) => x.id === a.billId); if (b) b.status = status; }
 
-function execute(a) {
+function execute(a, approved = false) {
   if (a.type === 'save') { S.checking -= a.amount; S.savings += a.amount; if (a.amount > 0) S.saved = true; }
   else if (a.type === 'rent_jar') { S.checking -= a.amount; S.rentJar += a.amount; }
   else if (a.type === 'cancel_subscription') { S.cancelled.push(a.payee); }
@@ -345,7 +384,7 @@ function execute(a) {
     let rest = a.amount;
     if (a.isRent) { const fromJar = Math.min(S.rentJar, rest); S.rentJar -= fromJar; rest -= fromJar; S.paychecksBeforeDue = 2; }
     S.checking -= rest;
-    S.history.push({ payee: a.payee, amount: a.amount, at: S.clock, via: 'pocket_pilot' });
+    S.history.push({ payee: a.payee, amount: a.amount, at: S.clock, via: 'pocket_pilot', approved });
     S.payees[a.payee] = { ...(S.payees[a.payee] || {}), trusted: true, lastAmount: a.amount, stopPaying: S.payees[a.payee]?.stopPaying };
     closeBill(a, 'paid');
   }
@@ -371,7 +410,7 @@ function bill(payee, amount, dueInHours, extra = {}) {
 function approve(id) {
   const i = S.inbox.findIndex((x) => x.id === id); if (i < 0) return;
   const { action } = S.inbox.splice(i, 1)[0];
-  execute(action);
+  execute(action, true);
   log(`${label(action)} (you approved)`, action.amount, 'sent', [{ text: 'You approved it, so it sent right away.' }]);
   render();
 }
@@ -388,6 +427,30 @@ function cancelHeld(id) {
   closeBill(action, 'declined');
   log(`${label(action)} (you cancelled)`, action.amount, 'cancelled', [{ text: 'Cancelled during the 24 hour hold. No money moved.' }]);
   render();
+}
+
+function approveRoutine() {
+  const { routine } = splitAsks(S.inbox);
+  if (!routine.length) return;
+  const ids = new Set(routine.map((x) => x.id));
+  S.inbox = S.inbox.filter((x) => !ids.has(x.id));
+  routine.forEach((x) => execute(x.action, true));
+  const total = routine.reduce((t, x) => t + x.action.amount, 0);
+  log(`Approved ${routine.length} routine items in one tap`, Math.round(total * 100) / 100, 'sent', [{ text: 'These were only waiting because of your comfort level. Anything unusual stays in your inbox to look at one by one.' }]);
+  render();
+}
+function allow(payee, maxAmount, why) {
+  S.standing[payee] = { maxAmount, since: S.clock };
+  S.payees[payee] = { ...(S.payees[payee] || {}), trusted: true };
+  log(`${payee} now pays automatically`, maxAmount, 'info', [{ text: why || `Up to ${usd(maxAmount)}. Pocket Pilot still asks if the bill jumps, looks like a duplicate, would break your buffer, or your bank data is old.` }]);
+}
+function revoke(payee) {
+  delete S.standing[payee];
+  log(`${payee} back to asking`, null, 'info', [{ text: 'You removed the standing permission. Your comfort level applies again.' }]);
+  render();
+}
+function sendMonth() {
+  SAMPLE_MONTH.forEach((a) => bill(a.payee, a.amount, Math.round((a.due - NOW) / H), { isRent: a.isRent }));
 }
 
 function skip24() {
@@ -454,6 +517,10 @@ document.addEventListener('click', (ev) => {
   if (t.dataset.act === 'wrong') { S.dismissed.push(t.dataset.key); log('You flagged an insight as wrong', null, 'info', [{ text: 'Pocket Pilot hides it and stops suggesting it. In a real product this feedback improves future insights.' }]); render(); return; }
   if (t.dataset.act === 'dismiss-deal') { S.dismissed.push('deal:' + t.dataset.key); log('Deal dismissed', null, 'info', [{ text: 'Pocket Pilot will not show this deal again.' }]); render(); return; }
   if (t.dataset.act === 'deal') { const d = DEALS_NOW().find((x) => x.id === t.dataset.key); log(`Looked at ${d.name}`, null, 'info', [{ text: 'Pocket Pilot never switches plans or opens accounts for you. You would sign up with them directly, and you can compare first.' }]); render(); return; }
+  if (t.dataset.act === 'batch') { approveRoutine(); return; }
+  if (t.dataset.act === 'trust-yes') { const sug = suggestStanding(ruleState(), S.clock).find((x) => x.payee === t.dataset.key); allow(sug.payee, sug.maxAmount, `You said yes after approving it ${sug.times} times. Up to ${usd(sug.maxAmount)}; anything unusual still asks.`); render(); return; }
+  if (t.dataset.act === 'trust-no') { S.dismissed.push('trust:' + t.dataset.key); log('Kept asking about ' + t.dataset.key, null, 'info', [{ text: 'Pocket Pilot will keep asking. It will not offer again for this payee.' }]); render(); return; }
+  if (t.dataset.act === 'revoke') { revoke(t.dataset.key); return; }
   if (t.dataset.act === 'approve') approve(id); else if (t.dataset.act === 'decline') decline(id); else if (t.dataset.act === 'cancel') cancelHeld(id);
 });
 
@@ -497,8 +564,19 @@ function render() {
   $('rent-bar').style.width = Math.min(100, (S.rentJar / RENT) * 100) + '%';
 
   const why = (rs) => rs.map((r) => esc(r.text)).join(' ');
+  const sugs = suggestStanding(ruleState(), S.clock).filter((x) => !S.dismissed.includes('trust:' + x.payee));
+  $('trust').innerHTML = sugs.map((x) => `<div class="trust"><span class="item-title">Pocket Pilot noticed</span><p class="item-why">${esc(x.text)}</p><div class="btns"><button class="btn go" data-act="trust-yes" data-key="${esc(x.payee)}">Yes, pay it for me</button><button class="btn no" data-act="trust-no" data-key="${esc(x.payee)}">Keep asking</button></div></div>`).join('');
+  const split = splitAsks(S.inbox);
+  const week = S.log.filter((e) => e.at > S.clock - 7 * DAY && (e.kind === 'auto' || e.kind === 'auto_now')).length;
+  $('checkin').textContent = `Weekly check in: ${week} handled for you, ${S.inbox.length} need you.`;
   $('inbox-count').textContent = S.inbox.length; $('inbox-count').className = 'count' + (S.inbox.length ? ' on' : '');
-  $('inbox').innerHTML = S.inbox.length ? S.inbox.map((x) => `<div class="item"><div class="item-row"><span class="item-title">${esc(label(x.action))}</span><span class="item-amt">${usd(x.action.amount)}</span></div><p class="item-why">${why(x.reasons)}</p><div class="btns"><button class="btn go" data-act="approve" data-id="${x.id}">Approve</button><button class="btn no" data-act="decline" data-id="${x.id}">Decline</button></div></div>`).join('') : '<p class="empty">Nothing needs you right now.</p>';
+  const batch = split.routine.length > 1 ? `<div class="batch"><span>${split.routine.length} routine items, ${usd(split.routine.reduce((t, x) => t + x.action.amount, 0))}</span><button class="btn go" data-act="batch">Approve all ${split.routine.length}</button></div>` : '';
+  const routineIds = new Set(split.routine.map((x) => x.id));
+  $('inbox').innerHTML = batch + (S.inbox.length ? S.inbox.map((x) => `<div class="item"><div class="item-row"><span class="item-title">${esc(label(x.action))}${routineIds.has(x.id) ? '' : ' <span class="badge">Look at this one</span>'}</span><span class="item-amt">${usd(x.action.amount)}</span></div><p class="item-why">${why(x.reasons)}</p><div class="btns"><button class="btn go" data-act="approve" data-id="${x.id}">Approve</button><button class="btn no" data-act="decline" data-id="${x.id}">Decline</button></div></div>`).join('') : '<p class="empty">Nothing needs you right now.</p>');
+  const st2 = Object.entries(S.standing);
+  $('standing-count').textContent = st2.length;
+  $('standing').innerHTML = st2.length ? st2.map(([p, v]) => `<div class="item"><div class="item-row"><span class="item-title">${esc(p)}</span><span class="item-amt">up to ${usd(v.maxAmount)}</span></div><div class="btns"><button class="btn ghost" data-act="revoke" data-key="${esc(p)}">Stop paying automatically</button></div></div>`).join('') : '<p class="empty">None yet. Approve a bill a few times and Pocket Pilot will offer.</p>';
+  $('asked').textContent = `In this session Pocket Pilot has asked Maya ${S.asked} time${S.asked === 1 ? '' : 's'}.`;
   $('held-count').textContent = S.held.length;
   $('held').innerHTML = S.held.length ? S.held.map((x) => `<div class="item"><div class="item-row"><span class="item-title">${esc(label(x.action))}</span><span class="item-amt">${usd(x.action.amount)}</span></div><p class="item-why">Sends ${esc(when(x.sendAt))}. Lands before it is due.</p><div class="btns"><button class="btn no" data-act="cancel" data-id="${x.id}">Cancel payment</button></div></div>`).join('') : '<p class="empty">No payments on hold.</p>';
 
@@ -518,6 +596,20 @@ function render() {
   document.querySelectorAll('.ev[aria-pressed]').forEach((b) => { const e = EVENTS[b.dataset.g].items[b.dataset.i]; b.setAttribute('aria-pressed', String(toggled(e.toggle))); });
 }
 
+// Approval load: the same month of bills, three ways (also scenarios C1 and C2)
+{
+  const lvl1 = baseState({ settings: { comfortLevel: 1 } });
+  const rowsL = [
+    ['v1: ask about every bill', countPrompts(SAMPLE_MONTH, lvl1, NOW)],
+    ['v2: weekly check in only', weeklyCheckIn(SAMPLE_MONTH, lvl1, NOW).promptsV2],
+    ['v2: plus standing permissions', weeklyCheckIn(SAMPLE_MONTH, withStanding(lvl1, MAYA_STANDING), NOW).promptsV2],
+  ];
+  const max = Math.max(...rowsL.map((r) => r[1]));
+  $('load').innerHTML = rowsL.map(([t, n], i) => `<div class="load-row${i === 2 ? ' best' : ''}"><span>${t}</span><span class="bar"><i style="width:${(n / max) * 100}%"></i></span><b>${n}</b></div>`).join('') + '<p class="checkin">Times Maya is interrupted for 9 bills. The 2 left are a new gym and a water bill that more than doubled: the ones worth a look.</p>';
+}
+$('send-month').addEventListener('click', () => { sendMonth(); render(); $('screen').scrollTo({ top: 0 }); });
+$('grant-all').addEventListener('click', () => { Object.entries(MAYA_STANDING).forEach(([p, m]) => allow(p, m)); render(); });
+
 // Tricky scenarios, run live against the same rules
 const rows = SCENARIOS.map((sc) => {
   let ok = true, did, exp;
@@ -526,6 +618,18 @@ const rows = SCENARIOS.map((sc) => {
     did = ins.map((i) => i.title).join('; ');
     ok = ins.length >= sc.expect.minInsights && ins.every((i) => i.numbers?.length);
     exp = 'Numbers behind every insight';
+  } else if (sc.kind === 'trust') {
+    const sug = suggestStanding(sc.state, NOW);
+    did = sug.length ? sug.map((x) => `Offers ${x.payee}, up to ${usd(x.maxAmount)}`).join('; ') : 'No offer';
+    ok = sug.map((x) => x.payee).sort().join(',') === [...sc.expect.suggests].sort().join(',') && (sc.expect.maxAmount === undefined || sug[0]?.maxAmount === sc.expect.maxAmount);
+    exp = sc.expect.suggests.length ? `Offer for ${sc.expect.suggests.join(', ')}` : 'No offer';
+  } else if (sc.kind === 'checkin') {
+    const month = [...SAMPLE_MONTH, ...(sc.extra || [])];
+    const v1 = countPrompts(month, sc.v1State, NOW);
+    const c = weeklyCheckIn(month, sc.state, NOW);
+    did = `v1 asks ${v1} times. v2: ${c.summary}, ${c.promptsV2} taps.`;
+    ok = v1 === sc.expect.promptsV1 && c.promptsV2 === sc.expect.promptsV2 && (sc.expect.handled === undefined || c.handled.length === sc.expect.handled) && (sc.expect.routine === undefined || c.routine.length === sc.expect.routine) && !c.routine.some((d) => d.reasons.some((r) => !ROUTINE_ASKS.includes(r.code)));
+    exp = `${sc.expect.promptsV1} asks become ${sc.expect.promptsV2}`;
   } else if (sc.kind === 'deals') {
     const ds = findDeals(SAMPLE_STATEMENT, DEAL_CATALOG, sc.savingsBalance);
     did = ds.map((d) => `${d.name} saves ${usd(d.yearlySavings)}/yr${d.paysPocketPilot ? ' (referral fee disclosed)' : ''}`).join('; ');

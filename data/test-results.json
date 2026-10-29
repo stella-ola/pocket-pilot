@@ -1,7 +1,7 @@
 {
   "gate": true,
-  "passed": 36,
-  "total": 36,
+  "passed": 59,
+  "total": 59,
   "results": [
     {
       "id": "T1",
@@ -502,6 +502,323 @@
       "fails": [],
       "actual": {
         "deals": "coastline $360/yr; zing $120/yr (fee disclosed); harborview $105/yr (fee disclosed)"
+      }
+    },
+    {
+      "id": "S1",
+      "title": "A standing permission pays a routine bill, even at \"Ask me about everything\"",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "auto",
+        "reasons": "standing_ok, hold",
+        "amount": 65
+      }
+    },
+    {
+      "id": "S2",
+      "title": "A bill above the standing limit asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "over_standing_limit",
+        "amount": 355
+      }
+    },
+    {
+      "id": "S3",
+      "title": "A generous limit still asks when the bill jumps",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "amount_changed",
+        "amount": 188.1
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Standing permission waits when bank data is old",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "stale_data",
+        "amount": 65
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Standing permission never breaks the safety buffer",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "below_buffer",
+        "amount": 310
+      }
+    },
+    {
+      "id": "S6",
+      "title": "Instructions inside a bill are still blocked",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "block",
+        "reasons": "instruction_in_content",
+        "amount": 65
+      }
+    },
+    {
+      "id": "S7",
+      "title": "A payment suggested in chat still asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "from_chat",
+        "amount": 65
+      }
+    },
+    {
+      "id": "S8",
+      "title": "Stop paying beats a standing permission",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "stop_paying",
+        "amount": 15.99
+      }
+    },
+    {
+      "id": "S9",
+      "title": "A possible duplicate still asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "possible_duplicate",
+        "amount": 92.4
+      }
+    },
+    {
+      "id": "S10",
+      "title": "A standing permission cannot sneak in a payee that is not trusted",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "new_payee",
+        "amount": 900
+      }
+    },
+    {
+      "id": "S11",
+      "title": "Cancelling a subscription still always asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "cancel_always_asks",
+        "amount": 15.99
+      }
+    },
+    {
+      "id": "S12",
+      "title": "No time for the 24 hour hold still asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "no_time_for_hold",
+        "amount": 65
+      }
+    },
+    {
+      "id": "S13",
+      "title": "The same bill twice, while the first is still on hold, asks",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "outcome": "ask",
+        "reasons": "possible_duplicate",
+        "amount": 65
+      }
+    },
+    {
+      "id": "R1",
+      "title": "Three approvals in a row at the same amount earns an offer",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "Bright Mobile up to $71.5"
+      }
+    },
+    {
+      "id": "R2",
+      "title": "Two approvals is not enough",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "none"
+      }
+    },
+    {
+      "id": "R3",
+      "title": "A bill that changes every month is not offered",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "none"
+      }
+    },
+    {
+      "id": "R4",
+      "title": "Never offered for payments over $3,000",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "none"
+      }
+    },
+    {
+      "id": "R5",
+      "title": "Not offered again once a payee has a standing permission",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "none"
+      }
+    },
+    {
+      "id": "R6",
+      "title": "Payments that ran on their own do not count as approvals",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "suggests": "none"
+      }
+    },
+    {
+      "id": "C1",
+      "title": "Same month of bills: v1 asks 9 times, v2 asks twice",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "checkin": "v1 asks 9; v2 7 handled for you, 2 need you; 2 taps; one by one: FitLife Gym, Clear Water"
+      }
+    },
+    {
+      "id": "C2",
+      "title": "With no standing permissions yet, the check in still turns 9 asks into 3 taps",
+      "tags": [
+        "v2"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "checkin": "v1 asks 9; v2 0 handled for you, 9 need you; 3 taps; one by one: FitLife Gym, Clear Water"
+      }
+    },
+    {
+      "id": "C4",
+      "title": "A bill that arrives twice in the same batch is never paid twice",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "checkin": "v1 asks 10; v2 7 handled for you, 3 need you; 3 taps; one by one: FitLife Gym, Clear Water, Bright Mobile"
+      }
+    },
+    {
+      "id": "C3",
+      "title": "When bank data is old, nothing can be approved in one tap",
+      "tags": [
+        "v2",
+        "safety"
+      ],
+      "pass": true,
+      "fails": [],
+      "actual": {
+        "checkin": "v1 asks 9; v2 0 handled for you, 9 need you; 9 taps; one by one: Harbor Apartments, Bright Mobile, City Power, StreamBox, Campus Loans, Shield Auto, NetSpeed Internet, FitLife Gym, Clear Water"
       }
     }
   ]

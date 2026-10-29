@@ -21,6 +21,9 @@ export function baseState(over = {}) {
       'City Power': { trusted: true, lastAmount: 92.4 },
       'StreamBox': { trusted: true, lastAmount: 15.99 },
       'Campus Loans': { trusted: true, lastAmount: 310 },
+      'Clear Water': { trusted: true, lastAmount: 38 },
+      'Shield Auto': { trusted: true, lastAmount: 128 },
+      'NetSpeed Internet': { trusted: true, lastAmount: 70 },
     },
     history: [],
     bills: [],
@@ -28,6 +31,29 @@ export function baseState(over = {}) {
     ...over,
   };
 }
+
+// v2 helpers
+export function withStanding(state, limits) {
+  const standing = {};
+  for (const [payee, maxAmount] of Object.entries(limits)) standing[payee] = { maxAmount, since: NOW - 40 * DAY };
+  return { ...state, standing };
+}
+const approvedPast = (payee, amounts) => amounts.map((amount, i) => ({ payee, amount, at: NOW - (31 + 30 * i) * DAY, via: 'pocket_pilot', approved: true }));
+
+// One month of Maya's bills: 7 routine, 1 new payee, 1 bill that more than doubled.
+export const SAMPLE_MONTH = [
+  { type: 'pay_bill', payee: 'Harbor Apartments', amount: 1800, isRent: true, due: NOW + 6 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'City Power', amount: 92.4, due: NOW + 8 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'StreamBox', amount: 15.99, due: NOW + 4 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'Campus Loans', amount: 310, due: NOW + 10 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'Shield Auto', amount: 128, due: NOW + 12 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'NetSpeed Internet', amount: 70, due: NOW + 11 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'FitLife Gym', amount: 45, due: NOW + 7 * DAY, origin: 'pilot' },
+  { type: 'pay_bill', payee: 'Clear Water', amount: 84, due: NOW + 9 * DAY, origin: 'pilot' },
+];
+// The 7 routine payees, each allowed 10% above the usual amount (rent at exactly the usual amount).
+export const MAYA_STANDING = { 'Harbor Apartments': 1800, 'Bright Mobile': 72, 'City Power': 102, 'StreamBox': 17.6, 'Campus Loans': 341, 'Shield Auto': 141, 'NetSpeed Internet': 77 };
 
 export const SCENARIOS = [
   // ---------------------------------------------------------------- From the PRD table
@@ -252,5 +278,143 @@ export const SCENARIOS = [
     id: 'D3', tags: ['deals'], title: 'A better savings rate only shows when the balance makes it worth it',
     kind: 'deals', savingsBalance: 3000,
     expect: { shown: ['harborview'] },
+  },
+  // ---------------------------------------------------------------- v2: standing permissions
+  {
+    id: 'S1', tags: ['v2'], title: 'A standing permission pays a routine bill, even at "Ask me about everything"',
+    state: withStanding(baseState({ settings: { comfortLevel: 1 } }), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'pilot' },
+    expect: { outcome: 'auto', reason: 'standing_ok', sendAfterHours: 24 },
+  },
+  {
+    id: 'S2', tags: ['v2', 'safety'], title: 'A bill above the standing limit asks',
+    state: withStanding(baseState({ settings: { comfortLevel: 1 } }), { 'Campus Loans': 341 }),
+    action: { type: 'pay_bill', payee: 'Campus Loans', amount: 355, due: NOW + 10 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'over_standing_limit' },
+  },
+  {
+    id: 'S3', tags: ['v2', 'safety'], title: 'A generous limit still asks when the bill jumps',
+    state: withStanding(baseState(), { 'City Power': 500 }),
+    action: { type: 'pay_bill', payee: 'City Power', amount: 188.1, due: NOW + 6 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'amount_changed' },
+  },
+  {
+    id: 'S4', tags: ['v2', 'safety'], title: 'Standing permission waits when bank data is old',
+    state: withStanding(baseState({ dataAgeHours: 20 }), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'stale_data' },
+  },
+  {
+    id: 'S5', tags: ['v2', 'safety'], title: 'Standing permission never breaks the safety buffer',
+    state: withStanding(baseState({ checking: 520 }), { 'Campus Loans': 341 }),
+    action: { type: 'pay_bill', payee: 'Campus Loans', amount: 310, due: NOW + 10 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'below_buffer' },
+  },
+  {
+    id: 'S6', tags: ['v2', 'safety'], title: 'Instructions inside a bill are still blocked',
+    state: withStanding(baseState(), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'bill_text' },
+    expect: { outcome: 'block', reason: 'instruction_in_content' },
+  },
+  {
+    id: 'S7', tags: ['v2', 'safety'], title: 'A payment suggested in chat still asks',
+    state: withStanding(baseState(), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'chat' },
+    expect: { outcome: 'ask', reason: 'from_chat' },
+  },
+  {
+    id: 'S8', tags: ['v2', 'safety'], title: 'Stop paying beats a standing permission',
+    state: withStanding(baseState({ payees: { ...baseState().payees, StreamBox: { trusted: true, lastAmount: 15.99, stopPaying: true } } }), { StreamBox: 17.6 }),
+    action: { type: 'pay_bill', payee: 'StreamBox', amount: 15.99, due: NOW + 4 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'stop_paying' },
+  },
+  {
+    id: 'S9', tags: ['v2', 'safety'], title: 'A possible duplicate still asks',
+    state: withStanding(baseState({ history: [{ payee: 'City Power', amount: 92.4, at: NOW - 3 * DAY, via: 'pocket_pilot' }] }), { 'City Power': 102 }),
+    action: { type: 'pay_bill', payee: 'City Power', amount: 92.4, due: NOW + 6 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'possible_duplicate' },
+  },
+  {
+    id: 'S10', tags: ['v2', 'safety'], title: 'A standing permission cannot sneak in a payee that is not trusted',
+    state: withStanding(baseState(), { 'Account 7731': 1000 }),
+    action: { type: 'pay_bill', payee: 'Account 7731', amount: 900, due: NOW + 5 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'new_payee' },
+  },
+  {
+    id: 'S11', tags: ['v2', 'safety'], title: 'Cancelling a subscription still always asks',
+    state: withStanding(baseState(), { StreamBox: 17.6 }),
+    action: { type: 'cancel_subscription', payee: 'StreamBox', amount: 15.99, origin: 'insight' },
+    expect: { outcome: 'ask', reason: 'cancel_always_asks' },
+  },
+  {
+    id: 'S12', tags: ['v2', 'safety'], title: 'No time for the 24 hour hold still asks',
+    state: withStanding(baseState(), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 30 * H, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'no_time_for_hold' },
+  },
+  {
+    id: 'S13', tags: ['v2', 'safety'], title: 'The same bill twice, while the first is still on hold, asks',
+    state: withStanding(baseState({ pending: [{ type: 'pay_bill', payee: 'Bright Mobile', amount: 65 }] }), { 'Bright Mobile': 72 }),
+    action: { type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'pilot' },
+    expect: { outcome: 'ask', reason: 'possible_duplicate' },
+  },
+
+  // ---------------------------------------------------------------- v2: trust ladder
+  {
+    id: 'R1', tags: ['v2'], title: 'Three approvals in a row at the same amount earns an offer',
+    kind: 'trust', state: baseState({ history: approvedPast('Bright Mobile', [65, 65, 65]) }),
+    expect: { suggests: ['Bright Mobile'], maxAmount: 71.5 },
+  },
+  {
+    id: 'R2', tags: ['v2'], title: 'Two approvals is not enough',
+    kind: 'trust', state: baseState({ history: approvedPast('Bright Mobile', [65, 65]) }),
+    expect: { suggests: [] },
+  },
+  {
+    id: 'R3', tags: ['v2'], title: 'A bill that changes every month is not offered',
+    kind: 'trust', state: baseState({ history: approvedPast('City Power', [92.4, 110.2, 88.75]) }),
+    expect: { suggests: [] },
+  },
+  {
+    id: 'R4', tags: ['v2', 'safety'], title: 'Never offered for payments over $3,000',
+    kind: 'trust', state: baseState({ history: approvedPast('Harbor Apartments', [3200, 3200, 3200]) }),
+    expect: { suggests: [] },
+  },
+  {
+    id: 'R5', tags: ['v2'], title: 'Not offered again once a payee has a standing permission',
+    kind: 'trust', state: withStanding(baseState({ history: approvedPast('Bright Mobile', [65, 65, 65]) }), { 'Bright Mobile': 72 }),
+    expect: { suggests: [] },
+  },
+  {
+    id: 'R6', tags: ['v2'], title: 'Payments that ran on their own do not count as approvals',
+    kind: 'trust', state: baseState({ history: approvedPast('Bright Mobile', [65, 65, 65]).map((h, i) => (i === 0 ? { ...h, approved: false } : h)) }),
+    expect: { suggests: [] },
+  },
+
+  // ---------------------------------------------------------------- v2: weekly check in and approval load
+  {
+    id: 'C1', tags: ['v2'], title: 'Same month of bills: v1 asks 9 times, v2 asks twice',
+    kind: 'checkin', state: withStanding(baseState({ settings: { comfortLevel: 1 } }), MAYA_STANDING),
+    v1State: baseState({ settings: { comfortLevel: 1 } }),
+    expect: { promptsV1: 9, promptsV2: 2, handled: 7, reviewEach: ['FitLife Gym', 'Clear Water'] },
+  },
+  {
+    id: 'C2', tags: ['v2'], title: 'With no standing permissions yet, the check in still turns 9 asks into 3 taps',
+    kind: 'checkin', state: baseState({ settings: { comfortLevel: 1 } }),
+    v1State: baseState({ settings: { comfortLevel: 1 } }),
+    expect: { promptsV1: 9, promptsV2: 3, handled: 0, routine: 7, reviewEach: ['FitLife Gym', 'Clear Water'] },
+  },
+  {
+    id: 'C4', tags: ['v2', 'safety'], title: 'A bill that arrives twice in the same batch is never paid twice',
+    kind: 'checkin', state: withStanding(baseState({ settings: { comfortLevel: 1 } }), MAYA_STANDING),
+    v1State: baseState({ settings: { comfortLevel: 1 } }),
+    extra: [{ type: 'pay_bill', payee: 'Bright Mobile', amount: 65, due: NOW + 5 * DAY, origin: 'pilot' }],
+    expect: { promptsV1: 10, promptsV2: 3, handled: 7, reviewEach: ['FitLife Gym', 'Clear Water', 'Bright Mobile'] },
+  },
+  {
+    id: 'C3', tags: ['v2', 'safety'], title: 'When bank data is old, nothing can be approved in one tap',
+    kind: 'checkin', state: withStanding(baseState({ dataAgeHours: 20, settings: { comfortLevel: 1 } }), MAYA_STANDING),
+    v1State: baseState({ dataAgeHours: 20, settings: { comfortLevel: 1 } }),
+    expect: { promptsV1: 9, promptsV2: 9, handled: 0, routine: 0 },
   },
 ];
